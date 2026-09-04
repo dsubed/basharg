@@ -1,0 +1,126 @@
+#!/bin/bash
+
+declare -a basharg_option_order=()
+declare -a basharg_positional_order=()
+declare -A basharg_option_names=()
+declare -A basharg_option_short_names=()
+declare -A basharg_option_takes_value=()
+declare -A basharg_option_values=()
+declare -A basharg_option_defaults=()
+declare -A basharg_positional_mandatory=()
+
+basharg.add_argument() {
+	local short_name=$1
+	local long_name=$2
+	local default_value=${3-}
+
+	basharg_option_order+=("$long_name")
+	basharg_option_names["$short_name"]=$long_name
+	basharg_option_names["$long_name"]=$long_name
+	basharg_option_short_names["$long_name"]=$short_name
+	basharg_option_takes_value["$long_name"]=$([[ $# -ge 3 ]] && echo true || echo false)
+	basharg_option_defaults["$long_name"]=$default_value
+	basharg_option_values["$long_name"]=$default_value
+}
+
+basharg.add_positional_argument() {
+	local positional_name=$1
+
+	basharg_positional_order+=("$positional_name")
+	basharg_positional_mandatory["$positional_name"]=${2-false}
+}
+
+basharg.parse_arguments() {
+	local argument option_name value positional_index=0
+
+	for argument in "$@"; do
+		if [[ $argument == -h || $argument == --help ]]; then
+			basharg.print_help
+			exit 0
+		fi
+	done
+
+	while (($#)); do
+		argument=$1
+		shift
+
+		if [[ $argument == --*=* ]]; then
+			option_name=${argument%%=*}
+			value=${argument#*=}
+		elif [[ $argument == -* && -n ${basharg_option_names[$argument]+x} ]]; then
+			option_name=${basharg_option_names[$argument]}
+			if [[ ${basharg_option_takes_value[$option_name]} == true ]] && (($#)); then
+				value=$1
+				shift
+			else
+				value=true
+			fi
+		elif [[ $argument == -* ]]; then
+			printf 'Unknown argument: %s\n' "$argument" >&2
+            printf 'Try %s --help for more information.\n' "$0" >&2
+			#return 2
+            exit 2
+		else
+			if ((positional_index >= ${#basharg_positional_order[@]})); then
+				printf 'Unexpected positional argument: %s\n' "$argument" >&2
+                printf 'Try %s --help for more information.\n' "$0" >&2
+				#return 2
+                exit 2
+			fi
+			basharg_option_values["${basharg_positional_order[$positional_index]}"]=$argument
+			((positional_index++))
+			continue
+		fi
+
+		basharg_option_values["$option_name"]=$value
+
+	done
+
+	local positional_name
+	for positional_name in "${basharg_positional_order[@]}"; do
+		if [[ ${basharg_positional_mandatory[$positional_name]} == true && -z ${basharg_option_values[$positional_name]+x} ]]; then
+			printf 'Missing mandatory positional argument: %s\n' "$positional_name" >&2
+            printf 'Try %s --help for more information.\n' "$0" >&2
+			exit 2
+		fi
+	done
+}
+
+basharg.print_help() {
+	local option_name positional_name
+	printf 'Usage: %s [options] ' "$0"
+	for positional_name in "${basharg_positional_order[@]}"; do
+		if [[ ${basharg_positional_mandatory[$positional_name]} == true ]]; then
+			printf '<%s> ' "$positional_name"
+		else
+			printf '[%s] ' "$positional_name"
+		fi
+	done
+	printf '\n\nOptions:\n'
+	for option_name in "${basharg_option_order[@]}"; do
+		printf '  %s, %s' "${basharg_option_short_names[$option_name]}" "$option_name"
+		if [[ ${basharg_option_takes_value[$option_name]} == true ]]; then
+			printf ' <%s>' "$option_name"
+		fi
+		printf '\n'
+	done
+}
+
+basharg.print_arguments() {
+	local option_name positional_name output=() value
+
+	for option_name in "${basharg_option_order[@]}"; do
+		value=${basharg_option_values[$option_name]}
+		if [[ -n $value && $value != true ]]; then
+			output+=("${basharg_option_short_names[$option_name]}" "$value")
+		elif [[ $value == true ]]; then
+			output+=("${basharg_option_short_names[$option_name]}")
+		fi
+	done
+
+	for positional_name in "${basharg_positional_order[@]}"; do
+		output+=("${basharg_option_values[$positional_name]-}")
+	done
+
+	printf '%s' "${output[*]}"
+}
