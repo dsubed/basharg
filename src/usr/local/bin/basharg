@@ -6,21 +6,20 @@ declare -A basharg_option_names=()
 declare -A basharg_option_short_names=()
 declare -A basharg_option_takes_value=()
 declare -A basharg_option_values=()
-declare -A basharg_option_defaults=()
+declare -A basharg_option_descriptions=()
 declare -A basharg_positional_mandatory=()
 
 basharg.add_argument() {
 	local short_name=$1
 	local long_name=$2
-	local default_value=${3-}
+	local description=${3-}
 
 	basharg_option_order+=("$long_name")
 	basharg_option_names["$short_name"]=$long_name
 	basharg_option_names["$long_name"]=$long_name
 	basharg_option_short_names["$long_name"]=$short_name
 	basharg_option_takes_value["$long_name"]=$([[ $# -ge 3 ]] && echo true || echo false)
-	basharg_option_defaults["$long_name"]=$default_value
-	basharg_option_values["$long_name"]=$default_value
+	basharg_option_descriptions["$long_name"]=$description
 }
 
 basharg.add_positional_argument() {
@@ -87,7 +86,8 @@ basharg.parse_arguments() {
 }
 
 basharg.print_help() {
-	local option_name positional_name
+	local option_name positional_name max_name_length=0 option_display
+
 	printf 'Usage: %s [options] ' "$0"
 	for positional_name in "${basharg_positional_order[@]}"; do
 		if [[ ${basharg_positional_mandatory[$positional_name]} == true ]]; then
@@ -96,13 +96,24 @@ basharg.print_help() {
 			printf '[%s] ' "$positional_name"
 		fi
 	done
+
+	for option_name in "${basharg_option_order[@]}"; do
+		option_display="${basharg_option_short_names[$option_name]}, $option_name"
+		if [[ ${basharg_option_takes_value[$option_name]} == true ]]; then
+			option_display+=" <VALUE>"
+		fi
+		if (( ${#option_display} > max_name_length )); then
+			max_name_length=${#option_display}
+		fi
+	done
+
 	printf '\n\nOptions:\n'
 	for option_name in "${basharg_option_order[@]}"; do
-		printf '  %s, %s' "${basharg_option_short_names[$option_name]}" "$option_name"
+		option_display="${basharg_option_short_names[$option_name]}, $option_name"
 		if [[ ${basharg_option_takes_value[$option_name]} == true ]]; then
-			printf ' <%s>' "$option_name"
+			option_display+=" <VALUE>"
 		fi
-		printf '\n'
+		printf '  %-*s %s\n' "$max_name_length" "$option_display" "${basharg_option_descriptions[$option_name]}"
 	done
 }
 
@@ -123,4 +134,9 @@ basharg.print_arguments() {
 	done
 
 	printf '%s' "${output[*]}"
+}
+
+basharg.get_argument_value() {
+	local argument_name=$1
+	echo "${basharg_option_values[$argument_name]}"
 }
