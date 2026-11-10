@@ -1,23 +1,27 @@
 #!/bin/bash
-start_test "Bash arguments.test"
+
 
 # Run tests
-RESULT=$(bash first.sh -k "some_value" "username_value")
-assert_equal "Use of -k should fail" "2" "$?"
+failing_test () {
+    RESULT=$(bash first.sh -k "some_value" "username_value")
+    assert_equal "Use of -k should fail" "2" "$?"
+}
 
 
-RESULT=$(bash first.sh)
-assert_equal "Use of no parameters should fail" "2" "$?"
+failing_test_no_parameters () {
+    RESULT=$(bash first.sh)
+    assert_equal "Use of no parameters should fail" "2" "$?"
+}
 
-assert_not_equal "Test 2" "-t some_value username_value kalle" "$RESULT"
+# assert_not_equal "Test 2" "-t some_value username_value kalle" "$RESULT"
 
 
-RESULT=$(bash first.sh --help)
-assert_equal "Use of --help should succeed" "0" "$?"
-assert_not_equal "Test 3" "-t some_value username_value kalle" "$RESULT"
+failing_test_help () {
+    RESULT=$(bash first.sh --help)
+    assert_equal "Use of --help should succeed" "0" "$?"
+    assert_not_equal "Test 3" "-t some_value username_value kalle" "$RESULT"
+}
 
-#finish up
-finish_test "Bash arguments.test"
 
 
 

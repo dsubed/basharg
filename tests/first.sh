@@ -1,6 +1,6 @@
 
 
-source /home/a000974/github_private/basharg/src/usr/local/bin/basharg # source the bash arguments script
+source ../src/usr/local/bin/basharg # source the bash arguments script
 
 basharg.add_argument "-t" "--test" "a description of the test argument"
 basharg.add_argument "-c" "--some_crazy_long_argument_name" "a description of the crazy long argument"
@@ -11,5 +11,4 @@ basharg.parse_arguments "$@"
 
 # basharg.print_arguments
 
-echo $(basharg.get_argument_value "username")
-echo $(basharg.get_argument_value "--test")
+echo $(basharg.get_argument_value "username") $(basharg.get_argument_value "--test")

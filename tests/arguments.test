@@ -1,13 +1,15 @@
 #!/bin/bash
-start_test "Bash arguments.test"
+
 
 # Run tests
-RESULT=$(bash first.sh -t "some_value" "username_value" "password_value")
-assert_equal "Test 1" "-t some_value username_value password_value" "$RESULT"
-assert_not_equal "Test 2" "-t some_value username_value kalle" "$RESULT"
+bash_arg_first_test () {
 
-#finish up
-finish_test "Bash arguments.test"
+    RESULT=$(bash first.sh -t "some_value" "username_value" "password_value")
+    check_last_command 0
+    assert_equal "Test 1" "username_value some_value" "$RESULT"
+    assert_not_equal "Test 2" "kalle" "$RESULT"
+    color_block purple "$RESULT"
+}
 
 
 
